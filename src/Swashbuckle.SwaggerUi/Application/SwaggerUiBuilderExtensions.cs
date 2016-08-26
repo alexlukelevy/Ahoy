@@ -9,7 +9,7 @@ namespace Microsoft.AspNetCore.Builder
     {
         public static IApplicationBuilder  UseSwaggerUi(
             this IApplicationBuilder app,
-            string baseRoute = "swagger/ui",
+            string baseRoute = "swagger",
             string swaggerUrl = "/swagger/v1/swagger.json")
         {
             baseRoute.Trim('/');
