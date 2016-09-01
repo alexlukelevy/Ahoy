@@ -9,30 +9,29 @@ namespace Microsoft.AspNetCore.Builder
     {
         public static IApplicationBuilder  UseSwaggerUi(
             this IApplicationBuilder app,
-            string baseRoute = "swagger",
-            string swaggerUrl = "/swagger/v1/swagger.json")
+            string uiBasePath = "swagger",
+            string swaggerPath = "swagger/v1/swagger.json")
         {
-            baseRoute.Trim('/');
-            var indexPath = baseRoute + "/index.html";
+            // Remove slashes to simplify url construction and routing
+            uiBasePath = uiBasePath.Trim('/');
+            swaggerPath = swaggerPath.Trim('/');
 
-            // Enable redirect from basePath to indexPath
-            app.UseMiddleware<RedirectMiddleware>(baseRoute, indexPath);
+            // Redirect uiBasePath to index.html
+            var indexPath = uiBasePath + "/index.html";
+            app.UseMiddleware<RedirectMiddleware>(uiBasePath, indexPath);
 
-            // Serve indexPath via middleware
-            app.UseMiddleware<SwaggerUiMiddleware>(indexPath, swaggerUrl);
+            // Serve index via middleware
+            app.UseMiddleware<SwaggerUiMiddleware>(indexPath, swaggerPath);
 
-            // Serve all other swagger-ui assets as static files
+            // Serve all other (embedded) swagger-ui content as static files
             var options = new FileServerOptions();
-            options.RequestPath = "/" + baseRoute;
+            options.RequestPath = "/" + uiBasePath;
             options.EnableDefaultFiles = false;
             options.StaticFileOptions.ContentTypeProvider = new FileExtensionContentTypeProvider();
-
-            var embedFiles = typeof(SwaggerUiBuilderExtensions).GetTypeInfo().Assembly.GetManifestResourceNames();
-
             options.FileProvider = new EmbeddedFileProvider(typeof(SwaggerUiBuilderExtensions).GetTypeInfo().Assembly,
                 "Swashbuckle.SwaggerUi.bower_components.swagger_ui.dist");
-
             app.UseFileServer(options);
+
             return app;
         }
     }

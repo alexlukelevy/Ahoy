@@ -44,7 +44,7 @@ namespace VirtualDirectory
                 // routes.MapWebApiRoute("DefaultApi", "api/{controller}/{id?}");
 
                 subApp.UseSwagger();
-                subApp.UseSwaggerUi(swaggerUrl: "/vdir/swagger/v1/swagger.json");
+                subApp.UseSwaggerUi();
             });
         }
     }

@@ -33,6 +33,7 @@
 
   <script type="text/javascript">
     $(function () {
+      var configData = JSON.parse('%(ConfigData)');
 
       hljs.configure({
         highlightSizeThreshold: 5000
@@ -43,7 +44,7 @@
         window.SwaggerTranslator.translate();
       }
       window.swaggerUi = new SwaggerUi({
-        url: "%(SwaggerUrl)",
+        url: configData.swaggerUrl,
         dom_id: "swagger-ui-container",
         supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch'],
         onComplete: function(swaggerApi, swaggerUi){
