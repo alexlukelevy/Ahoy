@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Template;
@@ -14,18 +15,17 @@ namespace Swashbuckle.SwaggerUi.Application
     {
         private readonly RequestDelegate _next;
         private readonly TemplateMatcher _requestMatcher;
-        private readonly string _swaggerPath;
+        private readonly SwaggerUiOptions _options;
         private readonly Assembly _resourceAssembly;
 
         public SwaggerUiMiddleware(
             RequestDelegate next,
-            string uiBasePath,
-            string swaggerPath
-        )
+            string uiIndexRoute,
+            SwaggerUiOptions options)
         {
             _next = next;
-            _requestMatcher = new TemplateMatcher(TemplateParser.Parse(uiBasePath), new RouteValueDictionary());
-            _swaggerPath = swaggerPath;
+            _requestMatcher = new TemplateMatcher(TemplateParser.Parse(uiIndexRoute), new RouteValueDictionary());
+            _options = options;
             _resourceAssembly = GetType().GetTypeInfo().Assembly;
         }
 
@@ -38,32 +38,45 @@ namespace Swashbuckle.SwaggerUi.Application
             }
 
             var template = _resourceAssembly.GetManifestResourceStream("Swashbuckle.SwaggerUi.CustomAssets.index.html");
-            var content = GenerateContent(template, httpContext.Request.PathBase);
-            RespondWithContentHtml(httpContext.Response, content);
+            var templateData = GetTemplateData(httpContext.Request.PathBase);
+            var content = GenerateContent(template, templateData);
+
+            RespondWithHtmlContent(httpContext.Response, content);
         }
 
         private bool RequestingSwaggerUi(HttpRequest request)
         {
-            if (request.Method != "GET") return false;
-
-			return _requestMatcher.TryMatch(request.Path, new RouteValueDictionary());
+            return (request.Method == "GET") && _requestMatcher.TryMatch(request.Path, new RouteValueDictionary());
         }
 
-        private Stream GenerateContent(Stream template, string requestPathBase)
+        private IDictionary<string, string> GetTemplateData(string requestPathBase)
         {
-            var configData = new
+            var jsConfig = new
             {
-                swaggerUrl = requestPathBase + "/" + _swaggerPath
+                swaggerEndpoints = (_options.SwaggerEndpoints.Any())
+                    ? _options.SwaggerEndpoints
+                    : DefaultSwaggerEndpoints(requestPathBase)
             };
 
-            var placeholderValues = new Dictionary<string, string>
+            return new Dictionary<string, string>
             {
-                { "%(ConfigData)", JsonConvert.SerializeObject(configData) }
+                {  "%(JSConfig)", JsonConvert.SerializeObject(jsConfig) }
             };
+        }
+        
+        private IEnumerable<SwaggerEndpoint> DefaultSwaggerEndpoints(string requestBasePath)
+        {
+            return new[]
+            {
+                new SwaggerEndpoint { url = requestBasePath + "/swagger/v1/swagger.json", description = "V1 Docs" }
+            };
+        }
 
+        private Stream GenerateContent(Stream template, IDictionary<string, string> templateData)
+        {
             var templateText = new StreamReader(template).ReadToEnd();
             var contentBuilder = new StringBuilder(templateText);
-            foreach (var entry in placeholderValues)
+            foreach (var entry in templateData)
             {
                 contentBuilder.Replace(entry.Key, entry.Value);
             }
@@ -71,7 +84,7 @@ namespace Swashbuckle.SwaggerUi.Application
             return new MemoryStream(Encoding.UTF8.GetBytes(contentBuilder.ToString()));
         }
 
-        private void RespondWithContentHtml(HttpResponse response, Stream content)
+        private void RespondWithHtmlContent(HttpResponse response, Stream content)
         {
             response.StatusCode = 200;
             response.ContentType = "text/html";

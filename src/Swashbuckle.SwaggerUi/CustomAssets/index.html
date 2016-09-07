@@ -33,7 +33,6 @@
 
   <script type="text/javascript">
     $(function () {
-      var configData = JSON.parse('%(ConfigData)');
 
       hljs.configure({
         highlightSizeThreshold: 5000
@@ -43,8 +42,12 @@
       if(window.SwaggerTranslator) {
         window.SwaggerTranslator.translate();
       }
+
+      // deserialize server-side config into a JS object
+      window.config = JSON.parse('%(JSConfig)');
+
       window.swaggerUi = new SwaggerUi({
-        url: configData.swaggerUrl,
+        url: config.swaggerEndpoints[0].url,
         dom_id: "swagger-ui-container",
         supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch'],
         onComplete: function(swaggerApi, swaggerUi){
@@ -88,9 +91,40 @@
   <div class="swagger-ui-wrap">
     <a id="logo" href="http://swagger.io"><img class="logo__img" alt="swagger" height="30" width="30" src="images/logo_small.png" /><span class="logo__title">swagger</span></a>
     <form id='api_selector'>
-      <div class='input'><input placeholder="http://example.com/api" id="input_baseUrl" name="baseUrl" type="text"/></div>
-      <div id='auth_container'></div>
-      <div class='input'><a id="explore" class="header__btn" href="#" data-sw-translate>Explore</a></div>
+      <div class='input'>
+        <input placeholder="http://example.com/api" id="input_baseUrl" name="baseUrl" type="text" />
+        <div id='auth_container'></div>
+        <select id="select_document">
+        </select>
+        <script type="text/javascript">
+          // Render options for the document selector
+          var options = '';
+          $.each(window.config.swaggerEndpoints, function (index, endpoint) {
+            options += "<option value='" + endpoint.url + "'>" + endpoint.description + "</option>";
+          });
+          $('#select_document').append(options);
+
+          $('#select_document').change(function () {
+            $('#input_baseUrl').val($(this).val());
+            window.swaggerUi.headerView.showCustom();
+          });
+        </script>
+        <style>
+          #select_version {
+            border: none;
+            -moz-border-radius: 4px;
+            -webkit-border-radius: 4px;
+            -o-border-radius: 4px;
+            -ms-border-radius: 4px;
+            -khtml-border-radius: 4px;
+            border-radius: 4px;
+            padding: 6px 8px;
+            color: white;
+            background-color: #547f00;
+            font-size: 0.7em;
+          }
+        </style>
+      </div>
     </form>
   </div>
 </div>
